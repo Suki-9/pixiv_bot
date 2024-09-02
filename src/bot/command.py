@@ -34,7 +34,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
 
   user = user_db.get(interaction.user.id)
 
-  if user == None or user[1] == None:
+  if user == None or user['user_id'] == None:
     return await sendErrResponse(interaction, 'Pixiv', '/updateでトークンを更新してみて')
 
   try:
@@ -65,7 +65,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
         ],
       )
 
-    meta_data, file_path = pixiv.archive(user[1], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
+    meta_data, file_path = pixiv.archive(user['user_id'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
     tmp_path = f"archive/tmp_{meta_data['id']}"
     thread_name = f"{meta_data['title']} (ID: {meta_data['id']})"
 
@@ -104,11 +104,11 @@ async def archive(interaction: discord.Interaction, url :str):
 
   user = user_db.get(interaction.user.id)
 
-  if user == None or user[1] == None:
+  if user == None or user['user_id'] == None:
     return await sendErrResponse(interaction, 'Pixiv', '/updateでトークンを更新してみて')
 
   try:
-    meta_data, file_path = pixiv.archive(user[1], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
+    meta_data, file_path = pixiv.archive(user['user_id'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
 
     return await interaction.response.send_message(
       ephemeral=True,
@@ -168,7 +168,12 @@ async def update_pixivToken(interaction: discord.Interaction, user_name: str, pa
   except Exception as e:
     await sendErrResponse(interaction, 'Unknown', e)
 
-@tree.command(name="setting",description="設定")
+@tree.command(name="setting", description="設定")
+@discord.app_commands.describe(key='項目のKey')
+@discord.app_commands.describe(key='項目のKey')
+@discord.app_commands.choices(key=[
+  discord.app_commands.Choice(name='enable_private', value='enable_private'),
+])
 async def setting_command(interaction: discord.Interaction, key: str, value: str):
   try:
     await interaction.response.defer()
@@ -183,20 +188,7 @@ async def setting_command(interaction: discord.Interaction, key: str, value: str
     await sendErrResponse(interaction, 'Unknown', e)
 
 @tree.command(name="help",description="使いかた")
-async def setting_command(interaction: discord.Interaction, topic: str | None):
-  if topic == 'setting':
-    await interaction.response.send_message(
-      embed = discord.Embed(
-        title="Setting",
-        description="Bot, Userに対する設定を変更します。"
-      ).add_field(
-        name="Key一覧",
-        value="\n".join(user_db.keys['user_config'])
-      ),
-      ephemeral=True,
-    )
-    return
-  
+async def setting_command(interaction: discord.Interaction):  
   await interaction.response.send_message(
     embed = discord.Embed(
       title="設定可能な項目一覧",

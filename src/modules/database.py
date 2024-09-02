@@ -6,24 +6,12 @@ def dict_factory(cursor, row):
     d[col[0]] = row[idx]
   return d
 
-class Archive:
+class DataBase:
   _conn: sqlite3.Connection
-  keys = {
-    'pixiv_illust': ['id', 'title', 'caption', 'artist', 'thumbnail', 'create_date'],
-    'pixiv_artist': ['id', 'name', 'icon'],
-    'pixiv_tag_bind': ['illust_id', 'name']
-  }
 
-  def __init__( self):
-    self._conn = sqlite3.connect("archive/archive.db")
+  def __init__( self, path):
+    self._conn = sqlite3.connect(path)
     self._conn.row_factory = dict_factory
-
-    cur = self.tx()
-    cur.execute("CREATE TABLE IF NOT EXISTS pixiv_illust (id INTGER UNIQUE, title TEXT, caption TEXT, thumbnail TEXT, artist INTGER, create_date INTGER);")
-    cur.execute("CREATE TABLE IF NOT EXISTS pixiv_tag_bind (illust_id INTGER, name TEXT);")
-    cur.execute("CREATE TABLE IF NOT EXISTS pixiv_artist (id INTGER UNIQUE, name TEXT, icon TEXT);")
-
-    self.commit()
 
   def __del__( self,):
     self._conn.close()
@@ -36,6 +24,23 @@ class Archive:
 
   def rollback( self ):
     self._conn.rollback()
+
+class Archive(DataBase):
+  keys = {
+    'pixiv_illust': ['id', 'title', 'caption', 'artist', 'thumbnail', 'create_date'],
+    'pixiv_artist': ['id', 'name', 'icon'],
+    'pixiv_tag_bind': ['illust_id', 'name']
+  }
+
+  def __init__( self):
+    super().__init__("archive/archive.db")
+
+    cur = self.tx()
+    cur.execute("CREATE TABLE IF NOT EXISTS pixiv_illust (id INTGER UNIQUE, title TEXT, caption TEXT, thumbnail TEXT, artist INTGER, create_date INTGER);")
+    cur.execute("CREATE TABLE IF NOT EXISTS pixiv_tag_bind (illust_id INTGER, name TEXT);")
+    cur.execute("CREATE TABLE IF NOT EXISTS pixiv_artist (id INTGER UNIQUE, name TEXT, icon TEXT);")
+
+    self.commit()
 
   def registry_artist(self, artist_meta: dict, tx: sqlite3.Cursor | None = None):
     dict_keys = artist_meta.keys()
@@ -96,31 +101,18 @@ class Archive:
 
     return illust
 
-class User():
-  _conn: sqlite3.Connection
+class User(DataBase):
   keys = {
-    'user_config': ['userId', 'pixiv_token']
+    'user_config': ['userId', 'pixiv_token', 'enable_private']
   }
 
-  def __init__( self):
-    self._conn = sqlite3.connect("archive/user_data.db")
+  def __init__(self):
+    super().__init__("archive/user_data.db")
 
     cur = self._conn.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS user_config(userId INTGER UNIQUE, pixiv_token TEXT);")
+    cur.execute("CREATE TABLE IF NOT EXISTS user_config(user_id INTGER UNIQUE, pixiv_token TEXT, enable_private BOOLEAN DEFAULT false);")
 
     self._conn.commit()
-
-  def __del__( self,):
-    self._conn.close()
-
-  def tx( self ):
-    return self._conn.cursor()
-  
-  def commit( self ):
-    self._conn.commit()
-
-  def rollback( self ):
-    self._conn.rollback()
 
   def update(self, id: str, key: str, value: str):
     if not key in self.keys['user_config']:
@@ -128,10 +120,10 @@ class User():
 
     cur = self.tx()
 
-    if None == cur.execute('SELECT userId FROM user_config WHERE userId = ?;', (id,)).fetchone():
-      cur.execute('INSERT INTO user_config (userId) VALUES (?);', (id,))
+    if None == cur.execute('SELECT user_id FROM user_config WHERE user_id = ?;', (id,)).fetchone():
+      cur.execute('INSERT INTO user_config (user_id) VALUES (?);', (id,))
 
-    cur.execute('UPDATE user_config SET ? = ? WHERE userId = ?;', (key, value, id))
+    cur.execute(f'UPDATE user_config SET {key} = ? WHERE user_id = ?;', (value, id))
 
     self.commit()
 
@@ -140,7 +132,7 @@ class User():
     cur.execute("DELETE FROM user_config WHERE id = ?;", (str(id),))
 
   def get( self, id: str | int):
-    return self.tx().execute(f"SELECT * FROM user_config WHERE userId = ?;", (str(id),)).fetchone()
+    return self.tx().execute(f"SELECT * FROM user_config WHERE user_id = ?;", (str(id),)).fetchone()
 
 archive_db = Archive()
 user_db = User()
