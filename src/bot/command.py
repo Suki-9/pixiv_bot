@@ -52,7 +52,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
           url = f"attachment://{meta_data['thumbnail']}"
         ).add_field(
           name = "Description",
-          value = meta_data['caption'],
+          value = meta_data['caption'].replace(r'<br />', '\n'),
           inline = False
         ).add_field(
           name = "タグ",
