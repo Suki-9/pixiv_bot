@@ -20,7 +20,8 @@ def archive(refresh_token: str, url: str) -> str:
   archived = archive_db.get(id)
 
   if archived != None:
-    return (archived, archive_path)
+    archived['archive_path'] = archive_path
+    return archived
 
   api = AppPixivAPI()
   api.auth(refresh_token=refresh_token)
@@ -33,6 +34,7 @@ def archive(refresh_token: str, url: str) -> str:
     'caption': illust['caption'],
     'create_date': utils.str2time(illust['create_date']).timestamp(),
     'thumbnail': illust['image_urls']['large'].split('/')[-1],
+    'archive_path': archive_path,
     'artist': {
       'id': illust['user']['id'], 
       'name': illust['user']['name'],
@@ -83,4 +85,4 @@ def archive(refresh_token: str, url: str) -> str:
     archive_db.rollback()
     raise Exception("不明なエラー")
 
-  return (meta_data, archive_path)
+  return meta_data
