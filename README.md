@@ -9,7 +9,8 @@ Pixiv上にアップロードされているイラストをDiscord Botを介し�
 いい感じにModuleをインストールして各種設定を行ってよしなに起動してくださいな。
 ```sh
 $ pip install -r requirements.txt
-$ cp src/example.env src/.env
+$ cp src/example.yaml src/config.yaml
+$ python src/init.py
 $ python src/main.py
 ```
 

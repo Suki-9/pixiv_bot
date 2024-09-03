@@ -9,7 +9,7 @@ def main():
   if not os.path.exists('archive/thumbnail'):
     os.makedirs('archive/thumbnail')
 
-  client.run(config.DISCORD_TOKEN)
+  client.run(config.get('DISCORD_TOKEN'))
 
 if __name__ == "__main__":
   main()
