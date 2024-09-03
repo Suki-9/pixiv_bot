@@ -1,6 +1,8 @@
 import os
 import shutil
 import discord
+from typing import List
+from bot import tree, client
 from bot.message import gen_post
 from py7zr import SevenZipFile
 from pixivpy3 import PixivError
@@ -30,44 +32,17 @@ async def sendErrResponse(interaction: discord.Interaction, type: str = 'Unknown
     ephemeral = True
   )
 
-@tree.command(name="show",description="アーカイブを表示します.")
-async def show_archive(interaction: discord.Interaction, url :str):
+@tree.command(name="show",description="スレッドを作成しそこにファイルをアップロードします。")
+async def show_archive(interaction: discord.Interaction, url :str) -> None:
   await interaction.response.defer()
 
-  user = user_db.get(interaction.user.id)
+  user = database.user_db.get(interaction.user.id)
 
   if user == None or user['user_id'] == None:
-    return await sendErrResponse(interaction, 'Pixiv', '/updateでトークンを更新してみて')
+    return await sendErrResponse(interaction, 'Pixiv', 'refresh_tokenが存在しないか無効')
 
   try:
-    async def send(title: str):
-      await interaction.followup.send(
-        embed = discord.Embed(
-          title = title,
-          color = 0x0059ff,
-          description = f"### [Original Link](https://www.pixiv.net/artworks/{meta_data['id']})",
-        ).set_author(
-          name = meta_data['artist']['name'],
-          url = f"https://www.pixiv.net/users/{meta_data['artist']['id']}",
-          icon_url=f"attachment://{meta_data['artist']['icon']}"
-        ).set_thumbnail(
-          url = f"attachment://{meta_data['thumbnail']}"
-        ).add_field(
-          name = "Description",
-          value = utils.html_parser(meta_data['caption']),
-          inline = False
-        ).add_field(
-          name = "タグ",
-          value = "\n".join(list(map(lambda tag: f"[{tag}](https://www.pixiv.net/tags/{tag}/artworks)", meta_data['tags']))),
-          inline = False
-        ),
-        files = [
-          discord.File(fp=f"archive/icons/{meta_data['artist']['icon']}",  filename=meta_data['artist']['icon'], spoiler=False),
-          discord.File(fp=f"archive/thumbnail/{meta_data['thumbnail']}",  filename=meta_data['thumbnail'],      spoiler=False)
-        ],
-      )
-
-    meta_data, file_path = pixiv.archive(user['pixiv_token'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
+    meta_data = pixiv.archive(user['pixiv_token'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
     tmp_path = f"archive/tmp_{meta_data['id']}"
     thread_name = f"{meta_data['title']} (ID: {meta_data['id']})"
 
@@ -80,7 +55,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
 
     os.makedirs(tmp_path)
 
-    with SevenZipFile(file_path, mode='r') as archive:
+    with SevenZipFile(meta_data['archive_path'], mode='r') as archive:
       archive.extractall(tmp_path)
 
     thread = await interaction.channel.create_thread(name=thread_name)
@@ -91,8 +66,14 @@ async def show_archive(interaction: discord.Interaction, url :str):
       )
 
     await sendOkResponse(interaction, **gen_post(meta_data, thread.mention))
+
+  except ValueError as e:
     logger.err('pixiv_bot.command', e)
+    await sendErrResponse(interaction, 'Value', e)
+
+  except PixivError as e:
     logger.err('pixiv_bot.command', e)
+    await sendErrResponse(interaction, 'Pixiv', e)
 
   except Exception as e:
     logger.err('pixiv_bot.command', e)
@@ -103,16 +84,17 @@ async def show_archive(interaction: discord.Interaction, url :str):
       shutil.rmtree(tmp_path)
 
 @tree.command(name="archive",description="イラストをアーカイブします.")
-async def archive(interaction: discord.Interaction, url :str):
+async def archive(interaction: discord.Interaction, url :str) -> None:
   await interaction.response.defer()
 
-  user = user_db.get(interaction.user.id)
+  user = database.user_db.get(interaction.user.id)
 
   if user == None or user['user_id'] == None:
-    return await sendErrResponse(interaction, 'Pixiv', '/updateでトークンを更新してみて')
+    await sendErrResponse(interaction, 'Pixiv', '/updateでトークンを更新してみて')
+    return
 
   try:
-    meta_data, file_path = pixiv.archive(user['user_id'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
+    meta_data = pixiv.archive(user['pixiv_token'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
 
     await sendOkResponse(interaction, **gen_post(meta_data, files = [
       discord.File(fp=meta_data['archive_path'], spoiler=False)
@@ -120,27 +102,24 @@ async def archive(interaction: discord.Interaction, url :str):
 
   except ValueError as e:
     logger.err('pixiv_bot.command', e)
+    await sendErrResponse(interaction, 'Value', e)
 
+  except PixivError as e:
     logger.err('pixiv_bot.command', e)
+    await sendErrResponse(interaction, 'Pixiv', e)
 
   except Exception as e:
     logger.err('pixiv_bot.command', e)
+    await sendErrResponse(interaction, 'Unknown', e)
 
 @tree.command(name="update",description="refresh_tokenのアップデート, 受け取ったクレデンシャル情報は処理後破棄されます.")
 async def update_pixivToken(interaction: discord.Interaction, user_name: str, password: str):
   try:
     await interaction.response.defer()
 
-    user_db.update(interaction.user.id, 'pixiv_token', pixiv.get_refresh_token(user_name, password))
-    
-    await interaction.followup.send(
-      embed = discord.Embed(
-        color = 0x14c900,
-        title = 'Update success',
-        description = 'refresh_tokenを更新完了'
-      ),
-      ephemeral = True
-    )
+    database.user_db.update(interaction.user.id, 'pixiv_token', pixiv.get_refresh_token(user_name, password))
+
+    await sendOkResponse(interaction, 'Update success', 'refresh_tokenを更新完了')
 
   except PixivError:
     logger.err('Pixiv', e)
