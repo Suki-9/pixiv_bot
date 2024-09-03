@@ -1,8 +1,7 @@
 import os
 import shutil
 import discord
-from bot import tree
-from bot import client
+from bot.message import gen_post
 from py7zr import SevenZipFile
 from pixivpy3 import PixivError
 from modules import pixiv, utils, logger, config, database
@@ -74,7 +73,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
 
     for thread in interaction.channel.threads:
       if thread_name == thread.name and client.user.id == thread.owner_id:
-        return await send(thread.mention)
+        return await sendOkResponse(interaction, **gen_post(meta_data, thread.mention))
 
     if os.path.exists(tmp_path):
       shutil.rmtree(tmp_path)
@@ -91,6 +90,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
         file = discord.File(fp = f'{tmp_path}/{file}', filename = file, spoiler = False)
       )
 
+    await sendOkResponse(interaction, **gen_post(meta_data, thread.mention))
     logger.err('pixiv_bot.command', e)
     logger.err('pixiv_bot.command', e)
 
@@ -114,32 +114,9 @@ async def archive(interaction: discord.Interaction, url :str):
   try:
     meta_data, file_path = pixiv.archive(user['user_id'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
 
-    return await interaction.response.send_message(
-      ephemeral=True,
-      files = [
-        discord.File(fp=f"archive/icons/{meta_data['artist']['icon']}", filename=meta_data['artist']['icon'], spoiler=False),
-        discord.File(fp=f"archive/thumbnail/{meta_data['thumbnail']}",  filename=meta_data['thumbnail'],      spoiler=False),
-        discord.File(fp=file_path,                                                                            spoiler=False)
-      ],
-      embed = discord.Embed(
-        title = meta_data['title'],
-        description = f"### [Original Link](https://www.pixiv.net/artworks/{meta_data['id']})",
-      ).set_thumbnail(
-        url = f"attachment://{meta_data['thumbnail']}"
-      ).add_field(
-        name = "Description",
-        value = utils.html_parser(meta_data['caption']),
-        inline = False
-      ).add_field(
-        name = "タグ",
-        value = "\n".join(list(map(lambda tag: f"[{tag}](https://www.pixiv.net/tags/{tag}/artworks)", meta_data['tags']))),
-        inline = False
-      ).set_author(
-        name = meta_data['artist']['name'],
-        url = f"https://www.pixiv.net/users/{meta_data['artist']['id']}",
-        icon_url=f"attachment://{meta_data['artist']['icon']}"
-      )
-    )
+    await sendOkResponse(interaction, **gen_post(meta_data, files = [
+      discord.File(fp=meta_data['archive_path'], spoiler=False)
+    ]))
 
   except ValueError as e:
     logger.err('pixiv_bot.command', e)
