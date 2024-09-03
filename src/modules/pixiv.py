@@ -30,7 +30,7 @@ def archive(refresh_token: str, url: str) -> dict:
   meta_data = {
     'id': illust['id'],
     'title': illust['title'],
-    'tags': map(lambda obj: obj['name'], illust['tags']),
+    'tags': list(map(lambda obj: obj['name'], illust['tags'])),
     'caption': illust['caption'],
     'create_date': utils.str2time(illust['create_date']).timestamp(),
     'thumbnail': illust['image_urls']['large'].split('/')[-1],
