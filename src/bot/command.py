@@ -172,7 +172,7 @@ async def setting_command(interaction: discord.Interaction, key: str, value: str
     await sendErrResponse(interaction, 'Unknown', e)
 
 @tree.command(name="help",description="使いかた")
-async def setting_command(interaction: discord.Interaction):  
+async def help(interaction: discord.Interaction):  
   await interaction.response.send_message(
     embed = discord.Embed(
       title="設定可能な項目一覧",
