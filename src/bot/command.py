@@ -152,16 +152,45 @@ async def update_pixivToken(interaction: discord.Interaction, user_name: str, pa
 
 @tree.command(name="setting", description="設定")
 @discord.app_commands.describe(key='項目のKey')
-@discord.app_commands.describe(key='項目のKey')
 @discord.app_commands.choices(key=[
-  discord.app_commands.Choice(name='enable_private', value='enable_private'),
+  discord.app_commands.Choice(value='enable_private',       name='Botからの返信を公開'),
+  discord.app_commands.Choice(value='disable_private',      name='Botからの返信を非公開'),
+  discord.app_commands.Choice(value='enable_auto_archive',  name='自動アーカイブを有効化'),
+  discord.app_commands.Choice(value='disable_auto_archive', name='自動アーカイブを無効化'),
 ])
-async def setting_command(interaction: discord.Interaction, key: str, value: str):
+async def setting(interaction: discord.Interaction, key: str, value: str | None):
   try:
     await interaction.response.defer()
 
-    user_db.update(interaction.user.id, key, value)
-    sendOkResponse(interaction, 'Update success', f"{key}を{value}へ更新.")
+    # ユーザー個々の設定
+    if key in ['enable_private', 'disable_private']:
+      database.user_db.update(interaction.user.id, key, value)
+      await sendOkResponse(interaction, 'Update success', f"{key}を{value}へ更新.")
+
+      return
+
+    # 自動アーカイブの設定
+    if key in ['enable_auto_archive', 'disable_auto_archive']:
+      enable_channels = config.get('auto_archive_enable_channels') or []
+      channel_id = interaction.channel_id
+
+      if key == 'enable_auto_archive':
+        if channel_id in enable_channels:
+          await sendErrResponse(interaction, 'Bad request', f"{interaction.channel.name}では既に有効です。")
+        else:
+          config.set('auto_archive_enable_channels', enable_channels + [ channel_id ])
+          await sendOkResponse(interaction, 'Success', f"{interaction.channel.name}で有効になりました")
+
+      if key == 'disable_auto_archive': 
+        if channel_id in enable_channels:
+          config.set('auto_archive_enable_channels', enable_channels.remove(channel_id))
+          await sendOkResponse(interaction, 'Success', f"{interaction.channel.name}で無効になりました")
+        else:
+          await sendErrResponse(interaction, 'Bad request', f"{interaction.channel.name}では既に無効です。")
+
+      return
+
+    await sendErrResponse(interaction, 'Bad request', f'{key}は存在しないキーです')
 
   except ValueError as e:
     logger.err('Value', e)
