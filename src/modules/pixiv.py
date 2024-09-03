@@ -11,7 +11,7 @@ from py7zr import SevenZipFile
 def get_refresh_token(username: str, password: str) -> str:
  return GetPixivToken(headless=True).login(username=username, password=password)["refresh_token"]
 
-def archive(refresh_token: str, url: str) -> str:
+def archive(refresh_token: str, url: str) -> dict:
   id = url.split('/')[-1]
 
   archive_path = f"archive/{id}.7z"
