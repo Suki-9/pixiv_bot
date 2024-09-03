@@ -7,23 +7,27 @@ from py7zr import SevenZipFile
 from pixivpy3 import PixivError
 from modules import pixiv, utils, logger, config, database
 
+async def sendOkResponse(interaction: discord.Interaction, title: str = '', description: str = '', embed: discord.Embed | None = None, files: List[discord.File] = []) -> None:
   logger.success('pixiv_bot.action', f'Send message.')
   return await interaction.followup.send(
     embed = discord.Embed(
       color = 0x14c900,
       title = title,
       description = description
-    ),
+    ) if embed == None else embed,
+    files=files,
     ephemeral = True
   )
 
+async def sendErrResponse(interaction: discord.Interaction, type: str = 'Unknown', description: str = '', embed: discord.Embed | None = None, files: List[discord.File] = []) -> None:
   logger.err('pixiv_bot.action', f'Send error message.')
   return await interaction.followup.send(
     embed=discord.Embed(
       color = 0xff0000,
       title = f'{type} error',
       description = description
-    ),
+    ) if embed == None else embed,
+    files=files,
     ephemeral = True
   )
 
