@@ -13,9 +13,6 @@ class DataBase:
     self._conn = sqlite3.connect(path)
     self._conn.row_factory = dict_factory
 
-  def __del__( self,):
-    self._conn.close()
-
   def tx( self ):
     return self._conn.cursor()
   
