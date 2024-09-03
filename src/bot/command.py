@@ -5,10 +5,9 @@ from bot import tree
 from bot import client
 from py7zr import SevenZipFile
 from pixivpy3 import PixivError
-from modules import pixiv, utils
-from modules.database import user_db
+from modules import pixiv, utils, logger, config, database
 
-async def sendOkResponse(interaction: discord.Interaction, title: str, description: str):
+  logger.success('pixiv_bot.action', f'Send message.')
   return await interaction.followup.send(
     embed = discord.Embed(
       color = 0x14c900,
@@ -18,7 +17,7 @@ async def sendOkResponse(interaction: discord.Interaction, title: str, descripti
     ephemeral = True
   )
 
-async def sendErrResponse(interaction: discord.Interaction, type: str, description: str):
+  logger.err('pixiv_bot.action', f'Send error message.')
   return await interaction.followup.send(
     embed=discord.Embed(
       color = 0xff0000,
@@ -88,10 +87,11 @@ async def show_archive(interaction: discord.Interaction, url :str):
         file = discord.File(fp = f'{tmp_path}/{file}', filename = file, spoiler = False)
       )
 
-    await send(thread.mention)
+    logger.err('pixiv_bot.command', e)
+    logger.err('pixiv_bot.command', e)
 
   except Exception as e:
-    print(e)
+    logger.err('pixiv_bot.command', e)
     await sendErrResponse(interaction, 'Unknown', e)
 
   finally:
@@ -138,13 +138,12 @@ async def archive(interaction: discord.Interaction, url :str):
     )
 
   except ValueError as e:
-    return await sendErrResponse(interaction, 'Value', e)
+    logger.err('pixiv_bot.command', e)
 
-  except PixivError:
-    return await sendErrResponse(interaction, 'Pixiv', 'トークンが無効になっているかも. /update を試してみて')
+    logger.err('pixiv_bot.command', e)
 
   except Exception as e:
-    return await sendErrResponse(interaction, 'Unknown', e)
+    logger.err('pixiv_bot.command', e)
 
 @tree.command(name="update",description="refresh_tokenのアップデート, 受け取ったクレデンシャル情報は処理後破棄されます.")
 async def update_pixivToken(interaction: discord.Interaction, user_name: str, password: str):
@@ -163,9 +162,11 @@ async def update_pixivToken(interaction: discord.Interaction, user_name: str, pa
     )
 
   except PixivError:
+    logger.err('Pixiv', e)
     await sendErrResponse(interaction, 'Pixiv', 'refresh_tokenの取得に失敗したかも')
 
   except Exception as e:
+    logger.err('Unknown', e)
     await sendErrResponse(interaction, 'Unknown', e)
 
 @tree.command(name="setting", description="設定")
@@ -182,9 +183,11 @@ async def setting_command(interaction: discord.Interaction, key: str, value: str
     sendOkResponse(interaction, 'Update success', f"{key}を{value}へ更新.")
 
   except ValueError as e:
+    logger.err('Value', e)
     await sendErrResponse(interaction, 'Value', e)
 
   except Exception as e:
+    logger.err('Unknown', e)
     await sendErrResponse(interaction, 'Unknown', e)
 
 @tree.command(name="help",description="使いかた")
