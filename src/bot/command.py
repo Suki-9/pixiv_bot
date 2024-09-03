@@ -65,7 +65,7 @@ async def show_archive(interaction: discord.Interaction, url :str):
         ],
       )
 
-    meta_data, file_path = pixiv.archive(user['user_id'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
+    meta_data, file_path = pixiv.archive(user['pixiv_token'], url if utils.is_url(url) else f'https://www.pixiv.net/artworks/{url}')
     tmp_path = f"archive/tmp_{meta_data['id']}"
     thread_name = f"{meta_data['title']} (ID: {meta_data['id']})"
 
