@@ -34,6 +34,6 @@ def html_parser(html: str):
   for match in re.findall(r'<a.*>.*?<\/a>', html):
     link = match.replace(re.search(r'<a.*?>', match).group(), '').replace('</a>', '')
     text = re.search(r'(?<=href=").*?(?=")', match).group()
-    html = html.replace(match,f"[{link}]({text})")
+    html =  html.replace(match, link if link == text else f"[{link}]({text})")
 
   return html
